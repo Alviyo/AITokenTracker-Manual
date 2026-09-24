@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8"/>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body {
+  width: 52px; height: 84px;
+  background: transparent;
+  overflow: hidden;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* ── Default: thin nearly-invisible strip ── */
+.btn {
+  position: absolute;
+  left: 0; top: 0;
+  width: 52px; height: 84px;
+  border-radius: 0 18px 18px 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 4px;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+  overflow: hidden;
+}
+
+/* Chevron hint — always visible, very subtle */
+.hint {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px;
+  color: rgba(255,255,255,0.18);
+  font-weight: 400;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+
+/* Full button content — hidden by default */
+.full {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 4px;
+  width: 52px; height: 84px;
+  opacity: 0;
+  transition: opacity 0.18s;
+  pointer-events: none;
+}
+.icon { font-size: 22px; line-height: 1; }
+.arrow {
+  font-size: 11px; color: rgba(255,255,255,0.7);
+  transition: transform 0.3s ease;
+}
+.btn.open .arrow { transform: rotate(180deg); }
+
+/* Drag handle hint */
+.drag-hint {
+  position: absolute;
+  top: 6px; left: 50%; transform: translateX(-50%);
+  display: flex; flex-direction: column; gap: 2px; opacity: 0;
+  transition: opacity 0.18s;
+}
+.drag-hint span {
+  display: block; width: 14px; height: 2px;
+  background: rgba(255,255,255,0.9); border-radius: 2px;
+}
+
+/* Background gradient — hidden by default */
+.bg {
+  position: absolute; inset: 0;
+  border-radius: 0 18px 18px 0;
+  background: linear-gradient(160deg, #4f8ef7 0%, #9b59f6 100%);
+  box-shadow: 3px 0 18px rgba(79,142,247,0.45), 3px 0 6px rgba(0,0,0,0.4);
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+.btn.open .bg {
+  background: linear-gradient(160deg, #22d3a0 0%, #4f8ef7 100%);
+  box-shadow: 4px 0 22px rgba(34,211,160,0.5), 3px 0 6px rgba(0,0,0,0.4);
+}
+
+/* ── Hovered state: full button visible ── */
+.btn.hovered .bg { opacity: 1; }
+.btn.hovered .full { opacity: 1; }
+.btn.hovered .drag-hint { opacity: 0.4; }
+.btn.hovered .hint { opacity: 0; }
+.btn.hovered:active { transform: scaleX(0.92); }
+</style>
+</head>
+<body>
+<div class="btn" id="btn" title="AI Token Tracker">
+  <div class="bg"></div>
+  <div class="hint">›</div>
+  <div class="drag-hint"><span></span><span></span></div>
+  <div class="full">
+    <div class="icon">🤖</div>
+    <div class="arrow">▶</div>
+  </div>
+</div>
+
+<script>
+const { ipcRenderer } = require("electron");
+
+const btn = document.getElementById("btn");
+let dragging    = false;
+let startScreenY = 0;
+let hasDragged  = false;
+let isOpen      = false;
+let hoverTimer  = null;
+
+// ── State from main ────────────────────────────────────────────────────────
+ipcRenderer.on("state", (e, st) => {
+  isOpen = (st === "open");
+  btn.classList.toggle("open", isOpen);
+});
+
+// ── Hover: tell main to resize window & show full button ───────────────────
+document.addEventListener("mouseenter", () => {
+  clearTimeout(hoverTimer);
+  btn.classList.add("hovered");
+  ipcRenderer.send("trigger-hover-in");
+});
+
+document.addEventListener("mouseleave", () => {
+  if (dragging) return; // don't collapse while dragging
+  hoverTimer = setTimeout(() => {
+    btn.classList.remove("hovered");
+    ipcRenderer.send("trigger-hover-out");
+  }, 120); // small delay to avoid flicker
+});
+
+// ── Drag to reposition ─────────────────────────────────────────────────────
+btn.addEventListener("mousedown", e => {
+  dragging     = true;
+  startScreenY = e.screenY;
+  hasDragged   = false;
+  e.preventDefault();
+});
+
+window.addEventListener("mousemove", e => {
+  if (!dragging) return;
+  const dy = e.screenY - startScreenY;
+  if (Math.abs(dy) > 4) hasDragged = true;
+  if (hasDragged) ipcRenderer.send("move-trigger", dy);
+  startScreenY = e.screenY;
+});
+
+window.addEventListener("mouseup", () => {
+  if (dragging && !hasDragged) ipcRenderer.send("toggle-panel");
+  dragging = hasDragged = false;
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8"/>
+<title>AI Token Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:rgba(10,10,15,0);--s:rgba(255,255,255,.04);--sh:rgba(255,255,255,.07);
+  --b:rgba(255,255,255,.08);--bf:rgba(255,255,255,.2);
+  --t:#f0f0f8;--tm:#8888a8;
+  --blue:#4f8ef7;--purple:#9b59f6;--green:#22d3a0;--orange:#f97316;--red:#ef4444;
+  --r:14px;--rs:9px;
+}
+html,body{height:100%;overflow:hidden;font-family:'Inter',system-ui,sans-serif;background:rgba(8,8,14,0.82);color:var(--t)}
+body::before{content:'';position:fixed;inset:0;
+  background:radial-gradient(ellipse 100% 60% at 0 10%,rgba(79,142,247,.15) 0%,transparent 60%),
+             radial-gradient(ellipse 80% 50% at 100% 90%,rgba(155,89,246,.1) 0%,transparent 55%);
+  pointer-events:none;z-index:0}
+
+/* LAYOUT */
+.panel-root{position:fixed;inset:0;display:flex;flex-direction:column;z-index:1}
+
+/* STICKY TOP */
+.top{flex-shrink:0;background:rgba(10,10,15,0.78);backdrop-filter:blur(24px);
+  border-bottom:1px solid var(--b);padding:14px 14px 10px;position:relative;z-index:2}
+.hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-ic{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--blue),var(--purple));
+  display:flex;align-items:center;justify-content:center;font-size:18px;
+  box-shadow:0 4px 14px rgba(79,142,247,.4);flex-shrink:0}
+.logo h1{font-size:1rem;font-weight:700;letter-spacing:-.02em;
+  background:linear-gradient(135deg,#fff 40%,rgba(255,255,255,.5));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.logo p{font-size:.62rem;color:var(--tm);margin-top:1px}
+.add-btn{display:flex;align-items:center;gap:5px;padding:7px 13px;
+  background:linear-gradient(135deg,var(--blue),var(--purple));border:none;border-radius:8px;
+  color:#fff;font-family:inherit;font-size:.75rem;font-weight:600;cursor:pointer;
+  transition:all .2s;white-space:nowrap;box-shadow:0 3px 12px rgba(79,142,247,.3)}
+.add-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(79,142,247,.45)}
+.sum{display:flex;gap:7px;flex-wrap:wrap}
+.pill{display:flex;align-items:center;gap:6px;padding:5px 11px;
+  background:var(--s);border:1px solid var(--b);border-radius:99px;
+  font-size:.7rem;font-weight:500;color:var(--tm);cursor:pointer;transition:all .2s;white-space:nowrap}
+.pill:hover{background:rgba(255,255,255,.08);color:var(--t);border-color:rgba(255,255,255,.15)}
+.pill.active-all{background:rgba(79,142,247,.18);border-color:rgba(79,142,247,.4);color:var(--blue)}
+.pill.active-ok{background:rgba(34,211,160,.18);border-color:rgba(34,211,160,.4);color:var(--green)}
+.pill.active-masih{background:rgba(251,146,60,.18);border-color:rgba(251,146,60,.4);color:var(--orange)}
+.dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.d1{background:var(--blue)}.d2{background:var(--green)}.d3{background:var(--red)}.d4{background:var(--orange)}
+
+/* SLIDER with arrow buttons */
+.sw{display:flex;align-items:center;gap:5px}
+.sw .cs{flex:1}
+.sarr{width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.07);
+  border:1px solid rgba(255,255,255,.12);color:var(--tm);font-size:.75rem;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;transition:all .2s;padding:0;font-family:inherit;line-height:1;
+  -webkit-user-select:none;user-select:none}
+.sarr:hover{background:rgba(255,255,255,.16);color:var(--t);border-color:rgba(255,255,255,.3)}
+.sarr:active{transform:scale(.88)}
+
+/* SCROLLABLE CONTENT */
+.content{flex:1;overflow-y:auto;overflow-x:hidden;padding:14px;display:flex;flex-direction:column;gap:14px}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:99px}
+
+/* EMPTY */
+.empty{text-align:center;padding:60px 16px;opacity:.6}
+.empty .ei{font-size:3rem;display:block;margin-bottom:14px}
+.empty h2{font-size:1rem;font-weight:600;color:var(--tm);margin-bottom:6px}
+.empty p{font-size:.78rem;color:#555577}
+
+/* CARDS */
+.card{background:var(--s);border:1px solid var(--b);border-radius:var(--r);
+  backdrop-filter:blur(16px);box-shadow:0 6px 24px rgba(0,0,0,.5);
+  animation:su .3s cubic-bezier(.34,1.56,.64,1);transition:border-color .2s,box-shadow .2s;
+  overflow:hidden;cursor:pointer}
+.card:hover{border-color:var(--bf);box-shadow:0 8px 28px rgba(79,142,247,.15)}
+/* Card head - always visible */
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:12px 14px;transition:background .15s}
+.card-head:hover{background:rgba(255,255,255,.02)}
+/* Card body - collapsed by default, expand on hover or .expanded */
+.card-body{padding:0 14px;max-height:0;overflow:hidden;opacity:0;
+  transition:max-height .35s cubic-bezier(.4,0,.2,1),opacity .25s,padding .3s}
+.card.expanded .card-body{
+  max-height:1400px;opacity:1;padding:0 14px 14px}
+/* Status badges */
+.sbadge{display:inline-flex;align-items:center;gap:4px;font-size:.6rem;font-weight:600;
+  padding:2px 7px;border-radius:99px;margin-top:2px;letter-spacing:.01em}
+.sb-aman{background:rgba(34,211,160,.14);color:var(--green);border:1px solid rgba(34,211,160,.25)}
+.sb-ada{background:rgba(251,146,60,.14);color:var(--orange);border:1px solid rgba(251,146,60,.25)}
+.sb-habis{background:rgba(239,68,68,.13);color:var(--red);border:1px solid rgba(239,68,68,.2)}
+.ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:8px}
+.chl{display:flex;align-items:center;gap:10px;min-width:0}
+.av{width:36px;height:36px;border-radius:10px;
+  background:linear-gradient(135deg,var(--blue),var(--purple));
+  display:flex;align-items:center;justify-content:center;
+  font-size:.8rem;font-weight:700;color:#fff;flex-shrink:0;text-transform:uppercase}
+.ci{min-width:0}
+.em{font-size:.8rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--t)}
+.el2{font-size:.62rem;color:var(--tm);margin-top:1px}
+.ib{width:28px;height:28px;border-radius:7px;background:var(--sh);border:1px solid var(--b);
+  color:var(--tm);display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:all .2s;font-size:.75rem}
+.ib:hover{background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.3);color:var(--red)}
+
+/* MODEL SECTIONS */
+.ms{display:flex;flex-direction:column;gap:10px}
+.msec{background:rgba(0,0,0,.2);border:1px solid var(--b);border-radius:var(--rs);padding:12px}
+.msh{display:flex;align-items:center;gap:7px;margin-bottom:10px}
+.mdot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.gd{background:linear-gradient(135deg,var(--blue),var(--purple));box-shadow:0 0 6px rgba(79,142,247,.6)}
+.cd2dot{background:linear-gradient(135deg,var(--green),var(--blue));box-shadow:0 0 6px rgba(34,211,160,.6)}
+.mst{font-size:.68rem;font-weight:600;color:var(--tm);letter-spacing:.04em;text-transform:uppercase}
+.sc{margin-bottom:2px}
+.st{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.sl{font-size:.68rem;color:var(--tm)}
+.sv{font-size:.8rem;font-weight:700;transition:color .3s}
+.vh{color:var(--green)}.vm{color:var(--orange)}.vl{color:var(--red)}
+
+/* SLIDER - fixed no-blip */
+.cs{position:relative;height:7px;border-radius:99px;background:rgba(255,255,255,.07);
+  cursor:pointer;user-select:none;-webkit-user-select:none}
+.cf{position:absolute;left:0;top:0;bottom:0;border-radius:99px;pointer-events:none}
+.gf{background:linear-gradient(90deg,var(--blue),var(--purple))}
+.pf{background:linear-gradient(90deg,var(--green),var(--blue))}
+.ct{position:absolute;top:50%;width:15px;height:15px;border-radius:50%;
+  border:2px solid rgba(255,255,255,.9);background:#fff;
+  transform:translate(-50%,-50%);box-shadow:0 2px 6px rgba(0,0,0,.5);pointer-events:none;
+  transition:transform .1s}
+.cs:hover .ct,.cs.drag .ct{transform:translate(-50%,-50%) scale(1.3)}
+.cs.drag{cursor:grabbing}
+
+/* RESET - dual model display */
+.rs{margin-top:12px;padding-top:10px;border-top:1px solid var(--b);display:flex;flex-direction:column;gap:9px}
+.rs-box{background:rgba(255,255,255,.025);border:1px solid var(--b);border-radius:8px;padding:8px 10px}
+.rs-head{display:flex;align-items:center;gap:6px;margin-bottom:7px}
+.rs-title{font-size:.68rem;font-weight:600;letter-spacing:.02em}
+.rs-title.g{color:var(--blue)}
+.rs-title.p{color:var(--green)}
+.rtb{font-size:.65rem;padding:3px 8px;border-radius:5px;background:rgba(255,255,255,.06);border:1px solid var(--b);color:var(--tm);cursor:pointer;transition:all .2s;font-family:inherit}
+.rtb:hover{background:rgba(255,255,255,.1);color:var(--t)}
+.ri{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:7px}
+.ig{display:flex;flex-direction:column;gap:2px}
+.il{font-size:.6rem;color:var(--tm);font-weight:500}
+.if{background:rgba(255,255,255,.05);border:1px solid var(--b);border-radius:6px;padding:5px 6px;color:var(--t);font-family:inherit;font-size:.78rem;font-weight:600;text-align:center;width:100%;transition:border-color .2s;-moz-appearance:textfield}
+.if::-webkit-inner-spin-button,.if::-webkit-outer-spin-button{-webkit-appearance:none}
+.if:focus{outline:none;border-color:var(--blue)}
+.srb-g{width:100%;padding:6px 8px;border-radius:6px;background:linear-gradient(135deg,rgba(79,142,247,.2),rgba(155,89,246,.2));border:1px solid rgba(79,142,247,.3);color:var(--blue);font-family:inherit;font-size:.72rem;font-weight:600;cursor:pointer;transition:all .2s}
+.srb-g:hover{background:linear-gradient(135deg,rgba(79,142,247,.3),rgba(155,89,246,.3));transform:translateY(-1px)}
+.srb-p{width:100%;padding:6px 8px;border-radius:6px;background:linear-gradient(135deg,rgba(34,211,160,.2),rgba(79,142,247,.2));border:1px solid rgba(34,211,160,.3);color:var(--green);font-family:inherit;font-size:.72rem;font-weight:600;cursor:pointer;transition:all .2s}
+.srb-p:hover{background:linear-gradient(135deg,rgba(34,211,160,.3),rgba(79,142,247,.3));transform:translateY(-1px)}
+.cd2{display:flex;align-items:center;gap:8px;padding:6px 10px;background:rgba(0,0,0,.35);border-radius:6px;border:1px solid var(--b)}
+.cdt{flex:1}.cdl{font-size:.6rem;color:var(--tm);margin-bottom:1px}
+.cdc{font-size:.82rem;font-weight:700;font-variant-numeric:tabular-nums;color:var(--blue)}
+.cdc.urg{color:var(--red);animation:pu 1s ease infinite}
+.cdc.done{color:var(--green)}
+.crb{font-size:.65rem;padding:3px 7px;border-radius:5px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:var(--red);cursor:pointer;font-family:inherit;transition:all .2s}
+.crb:hover{background:rgba(239,68,68,.2)}
+.filter-empty{text-align:center;padding:32px 16px}
+.filter-empty span{font-size:2rem;display:block;margin-bottom:8px;opacity:.4}
+.filter-empty p{font-size:.8rem;color:var(--tm)}
+
+/* MODAL */
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);
+  z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;
+  opacity:0;pointer-events:none;transition:opacity .2s}
+.mo.vis{opacity:1;pointer-events:all}
+.md{background:rgba(18,18,28,.97);border:1px solid var(--bf);border-radius:16px;padding:24px;
+  width:100%;max-width:340px;box-shadow:0 24px 60px rgba(0,0,0,.8);
+  transform:scale(.9) translateY(16px);
+  transition:transform .25s cubic-bezier(.34,1.56,.64,1)}
+.mo.vis .md{transform:scale(1) translateY(0)}
+.mh{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.mtt{font-size:1rem;font-weight:700}
+.mcl{width:28px;height:28px;border-radius:7px;background:var(--sh);border:1px solid var(--b);
+  color:var(--tm);display:flex;align-items:center;justify-content:center;cursor:pointer;
+  font-size:.9rem;transition:all .2s}
+.mcl:hover{color:var(--t);background:rgba(255,255,255,.1)}
+.mil{font-size:.75rem;color:var(--tm);margin-bottom:7px;font-weight:500}
+.mi{width:100%;background:rgba(255,255,255,.05);border:1px solid var(--b);border-radius:9px;
+  padding:10px 14px;color:var(--t);font-family:inherit;font-size:.85rem;outline:none;
+  transition:border-color .2s;margin-bottom:16px}
+.mi:focus{border-color:var(--blue)}
+.ma{display:flex;gap:8px}
+.bc{flex:1;padding:10px;border-radius:9px;background:rgba(255,255,255,.05);
+  border:1px solid var(--b);color:var(--tm);font-family:inherit;font-size:.8rem;
+  font-weight:600;cursor:pointer;transition:all .2s}
+.bc:hover{background:rgba(255,255,255,.09);color:var(--t)}
+.bk{flex:2;padding:10px;border-radius:9px;background:linear-gradient(135deg,var(--blue),var(--purple));
+  border:none;color:#fff;font-family:inherit;font-size:.8rem;font-weight:600;cursor:pointer;
+  transition:all .2s;box-shadow:0 4px 14px rgba(79,142,247,.3)}
+.bk:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(79,142,247,.45)}
+
+/* TOAST */
+.tc{position:fixed;bottom:20px;right:16px;z-index:2000;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{padding:10px 14px;border-radius:9px;font-size:.78rem;font-weight:600;
+  box-shadow:0 6px 18px rgba(0,0,0,.5);backdrop-filter:blur(10px);
+  animation:ti .35s cubic-bezier(.34,1.56,.64,1) forwards;
+  border:1px solid rgba(255,255,255,.1);pointer-events:all}
+.ts{background:rgba(34,211,160,.2);border-color:rgba(34,211,160,.3);color:var(--green)}
+.tin{background:rgba(79,142,247,.2);border-color:rgba(79,142,247,.3);color:var(--blue)}
+.tw{background:rgba(249,115,22,.2);border-color:rgba(249,115,22,.3);color:var(--orange)}
+.toast.hid{animation:to .25s ease forwards}
+
+@keyframes su{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes ti{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+@keyframes to{from{opacity:1;transform:translateX(0)}to{opacity:0;transform:translateX(20px)}}
+@keyframes pu{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ── URGENT GLOW RING — JS-driven opacity, no CSS animation ──
+   JS setInterval at 40ms uses sin wave to update opacity.
+   Never restarts/blinks on renderList() re-renders. */
+.glow-ring {
+  position: absolute; inset: 0; border-radius: var(--r);
+  box-shadow: inset 0 0 0 1.5px rgba(239,90,60,0.85),
+              0 0 24px rgba(239,90,60,0.6), 0 0 48px rgba(239,90,60,0.22);
+  pointer-events: none; z-index: 3; opacity: 0; will-change: opacity;
+}
+</style>
+</head>
+<body>
+<div class="panel-root" id="root">
+  <div class="top">
+    <div class="hdr">
+      <div class="logo">
+        <div class="logo-ic">🤖</div>
+        <div><h1>AI Token Tracker</h1><p>Monitor penggunaan token AI</p></div>
+      </div>
+      <button class="add-btn" onclick="openModal()">＋ Tambah Akun</button>
+    </div>
+    <div class="sum" id="sumBar" style="display:none">
+      <div class="pill active-all" id="pill-all" onclick="setFilter('all')">
+        <span class="dot d1"></span><span id="tTotal">0 Akun</span>
+      </div>
+      <div class="pill" id="pill-ok" onclick="setFilter('ok')">
+        <span class="dot d2"></span><span id="tHealthy">0 Aman</span>
+      </div>
+      <div class="pill" id="pill-masih" onclick="setFilter('masih')">
+        <span class="dot d4"></span><span id="tMasih">0 Masih Ada</span>
+      </div>
+      </div>
+  </div>
+  <div class="content">
+    <div id="list"></div>
+    <div class="empty" id="empty">
+      <span class="ei">🤖</span>
+      <h2>Belum ada akun</h2>
+      <p>Klik "Tambah Akun" untuk mulai tracking token AI</p>
+    </div>
+  </div>
+</div>
+
+<!-- Modal tambah akun -->
+<div class="mo" id="mo">
+  <div class="md">
+    <div class="mh">
+      <div class="mtt">Tambah Akun Baru</div>
+      <button class="mcl" onclick="closeModal()">✕</button>
+    </div>
+    <div class="mil">Alamat Email</div>
+    <input class="mi" id="ei" type="email" placeholder="contoh@gmail.com"
+      onkeydown="if(event.key==='Enter')addAcc()"/>
+    <div class="ma">
+      <button class="bc" onclick="closeModal()">Batal</button>
+      <button class="bk" onclick="addAcc()">Tambahkan</button>
+    </div>
+  </div>
+</div>
+
+<div class="tc" id="tc"></div>
+
+<script>
+const { ipcRenderer } = require('electron');
+const fs = require('fs');
+const path = require('path');
+const DATA_FILE = path.join(__dirname, '..', 'data.json');
+
+function load_data() {
+  try {
+    const raw = fs.readFileSync(DATA_FILE, 'utf8').replace(/^\uFEFF/, '');
+    const d = JSON.parse(raw);
+    // Backward compat: migrate old resetAt to per-model fields
+    if (d.accounts) {
+      d.accounts.forEach(a => {
+        if (!('resetAtG' in a)) {
+          // Migrate: put old resetAt into Gemini timer if it exists
+          a.resetAtG = a.resetAt || null;
+          a.rdG = a.rd || ''; a.rhG = a.rh || ''; a.rmG = a.rm || '';
+        }
+        if (!('resetAtP' in a)) {
+          a.resetAtP = null;
+          a.rdP = ''; a.rhP = ''; a.rmP = '';
+        }
+        // Remove old unified fields
+        delete a.resetAt; delete a.rd; delete a.rh; delete a.rm;
+      });
+    }
+    return d;
+  } catch(e) {
+    return { accounts: [] };
+  }
+}
+
+function save_data(d) {
+  try {
+    const json = JSON.stringify(d);
+    fs.writeFileSync(DATA_FILE, Buffer.from(json, 'utf8'));
+  } catch(e) {}
+}
+
+let S = load_data();
+let activeFilter = 'all';
+const CI = {}; // countdown intervals: key = id+'G' or id+'P'
+const expandedCards = {}; // id -> true/false (clicked open)
+
+
+function gid() { return '_'+Math.random().toString(36).slice(2,11); }
+function gtc(v) { return v>40?'vh':v>25?'vm':'vl'; }
+function isAman(a) { return a.gemini>40&&a.gpt>40; }
+function isOk(a) { return isAman(a); } // backward compat
+function isMasih(a) { return a.gemini>25||a.gpt>25; } // at least one > 25%
+function isUsable(a) { return isMasih(a); }
+function getStatus(a){
+  if(isAman(a)) return {cls:'sb-aman',dot:'●',lbl:'Aman'};
+  if(isMasih(a)) return {cls:'sb-ada',dot:'●',lbl:'Masih Ada Token'};
+  return {cls:'sb-habis',dot:'●',lbl:'Token Habis'};
+}
+function gin(e) { return e.slice(0,2).toUpperCase(); }
+
+function fmt(ms) {
+  const sc=Math.floor(ms/1000)%60,m=Math.floor(ms/60000)%60,h=Math.floor(ms/3600000)%24,d=Math.floor(ms/86400000);
+  const p=n=>String(n).padStart(2,'0');
+  return d>0?d+'h '+p(h)+'j '+p(m)+'m '+p(sc)+'d':p(h)+'j '+p(m)+'m '+p(sc)+'d';
+}
+
+function save(){save_data(S)}
+
+function toast(msg,t='tin'){
+  const el=document.createElement('div');
+  el.className='toast '+t;el.textContent=msg;
+  document.getElementById('tc').appendChild(el);
+  setTimeout(()=>{el.classList.add('hid');setTimeout(()=>el.remove(),250)},2600);
+}
+
+function setFilter(f){
+  activeFilter=f;
+  document.getElementById('pill-all').className='pill'+(f==='all'?' active-all':'');
+  document.getElementById('pill-ok').className='pill'+(f==='ok'?' active-ok':'');
+  document.getElementById('pill-masih').className='pill'+(f==='masih'?' active-masih':'');
+  renderList();
+}
+
+function openModal(){document.getElementById('mo').classList.add('vis');setTimeout(()=>document.getElementById('ei').focus(),180)}
+function closeModal(){document.getElementById('mo').classList.remove('vis');document.getElementById('ei').value=''}
+document.getElementById('mo').addEventListener('click',e=>{if(e.target.id==='mo')closeModal()});
+
+function addAcc(){
+  const em=document.getElementById('ei').value.trim();
+  if(!em){toast('Email tidak boleh kosong!','tw');return}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)){toast('Format email tidak valid!','tw');return}
+  if(S.accounts.some(a=>a.email===em)){toast('Email sudah ada!','tw');return}
+  S.accounts.push({id:gid(),email:em,gemini:100,gpt:100,
+    resetAtG:null,rdG:'',rhG:'',rmG:'',
+    resetAtP:null,rdP:'',rhP:'',rmP:''});
+  save();closeModal();render();toast('Akun '+em+' ditambahkan!','ts');
+}
+
+function delAcc(id){
+  const a=S.accounts.find(x=>x.id===id);
+  if(!a||!confirm('Hapus akun '+a.email+'?'))return;
+  clearInterval(CI[id+'G']);clearInterval(CI[id+'P']);
+  delete CI[id+'G'];delete CI[id+'P'];delete expandedCards[id];
+  S.accounts=S.accounts.filter(x=>x.id!==id);
+  save();render();toast('Akun dihapus.','tin');
+}
+
+// SLIDER - fixed: no re-render on drag, direct DOM update only
+function initSlider(tr,fi,th,val,cb){
+  let drag=false;
+  let rafId=null;
+
+  function sv(cx){
+    const r=tr.getBoundingClientRect();
+    let p=Math.round(((cx-r.left)/r.width)*100);
+    p=Math.max(0,Math.min(100,p));
+    fi.style.width=p+'%';
+    th.style.left=p+'%';
+    cb(p);
+  }
+
+  fi.style.width=val+'%';
+  th.style.left=val+'%';
+
+  tr.addEventListener('mousedown',e=>{
+    drag=true;
+    tr.classList.add('drag');
+    sv(e.clientX);
+    e.preventDefault();
+    e.stopPropagation();
+  });
+  // Block click events that fire after drag (prevents card collapse on drag end)
+  tr.addEventListener('click',e=>{e.stopPropagation();});
+
+  // Use document-level listeners (attached once) via named functions stored on element
+  tr._mmove = e=>{ if(!drag)return; if(rafId)cancelAnimationFrame(rafId); rafId=requestAnimationFrame(()=>{ sv(e.clientX); rafId=null; }); };
+  tr._mup   = ()=>{ if(drag){drag=false;tr.classList.remove('drag');} };
+
+  document.addEventListener('mousemove', tr._mmove);
+  document.addEventListener('mouseup',   tr._mup);
+}
+
+function cleanupSlider(tr){
+  if(tr&&tr._mmove) document.removeEventListener('mousemove', tr._mmove);
+  if(tr&&tr._mup)   document.removeEventListener('mouseup',   tr._mup);
+}
+
+// TIMER per model
+function setTimer(id, model){
+  const a=S.accounts.find(x=>x.id===id);if(!a)return;
+  const ds='rd'+model, hs='rh'+model, ms2='rm'+model;
+  const d=parseInt(document.getElementById('d-'+id+model).value)||0;
+  const h=parseInt(document.getElementById('h-'+id+model).value)||0;
+  const m=parseInt(document.getElementById('m-'+id+model).value)||0;
+  if(!d&&!h&&!m){toast('Masukkan minimal 1 menit!','tw');return}
+  a['resetAt'+model]=Date.now()+(d*86400+h*3600+m*60)*1000;
+  a[ds]=d;a[hs]=h;a[ms2]=m;
+  save();toast('Reset timer diset!','ts');renderReset(id);startCD(id,model);
+}
+
+function clearTimer(id, model){
+  const a=S.accounts.find(x=>x.id===id);if(!a)return;
+  a['resetAt'+model]=null;
+  clearInterval(CI[id+model]);delete CI[id+model];
+  save();renderReset(id);toast('Timer dihapus.','tin');
+}
+
+function startCD(id, model){
+  const key=id+model;
+  clearInterval(CI[key]);
+  const a=S.accounts.find(x=>x.id===id);
+  if(!a||!a['resetAt'+model])return;
+  function tick(){
+    const el=document.getElementById('cd-'+id+model);if(!el){clearInterval(CI[key]);return}
+    const rem=a['resetAt'+model]-Date.now();
+    // Toggle class only on state change + start/stop breathe engine
+    const cardEl=document.getElementById('card-'+id);
+    if(cardEl){
+      const shouldUrgent=rem>0&&rem<3600000;
+      const hasUrgent=cardEl.classList.contains('urgent');
+      if(shouldUrgent&&!hasUrgent) cardEl.classList.add('urgent');
+      if(!shouldUrgent&&hasUrgent)  cardEl.classList.remove('urgent');
+      // startBreathe not needed here — engine self-manages from S.accounts data
+    }
+    if(rem<=0){
+      el.textContent='Token Direset! ✅';el.className='cdc done';
+      if(model==='G') a.gemini=100; else a.gpt=100;
+      a['resetAt'+model]=null;save();
+      setTimeout(()=>{
+        // Update only the affected model's slider — do NOT call upSum/renderList
+        const pfx=model==='G'?'g':'p';
+        const fi=document.getElementById(pfx+'f-'+id);
+        const th=document.getElementById(pfx+'h-'+id);
+        const sv=document.getElementById(pfx+'v-'+id);
+        if(fi)fi.style.width='100%';
+        if(th)th.style.left='100%';
+        if(sv){sv.textContent='100%';sv.className='sv vh';}
+        renderReset(id);
+        upSumNoRender();
+        const badge=document.querySelector('#card-'+id+' .sbadge');
+        if(badge){const st=getStatus(a);badge.className='sbadge '+st.cls;badge.textContent=st.dot+' '+st.lbl;}
+        toast('Token '+a.email+' ('+(model==='G'?'Gemini':'GPT/Claude')+') auto-reset 100%! 🎉','ts');
+      },1200);
+      clearInterval(CI[key]);return;
+    }
+    el.textContent=fmt(rem);el.className='cdc'+(rem<3600000?' urg':'');
+  }
+  tick();CI[key]=setInterval(tick,1000);
+}
+
+function renderReset(id){
+  const a=S.accounts.find(x=>x.id===id);
+  const sec=document.getElementById('rs-'+id);
+  if(!a||!sec)return;
+  sec.innerHTML=buildReset(a);
+  if(a.resetAtG&&a.resetAtG>Date.now())startCD(id,'G');
+  if(a.resetAtP&&a.resetAtP>Date.now())startCD(id,'P');
+  // Re-evaluate urgency: urgent only if at least one timer < 1h
+  const now=Date.now();
+  const gUrgent=a.resetAtG&&a.resetAtG>now&&(a.resetAtG-now)<3600000;
+  const pUrgent=a.resetAtP&&a.resetAtP>now&&(a.resetAtP-now)<3600000;
+  const cardEl=document.getElementById('card-'+id);
+  if(cardEl){
+    const _wasU2=cardEl.classList.contains('urgent');
+    const _nowU2=!!(gUrgent||pUrgent);
+    if(_nowU2!==_wasU2)cardEl.classList.toggle('urgent',_nowU2);
+    if(_nowU2)startBreathe();else tryStopBreathe();
+  }
+}
+
+function editTimer(id, model){
+  const a=S.accounts.find(x=>x.id===id);if(!a)return;
+  a['resetAt'+model]=null;
+  clearInterval(CI[id+model]);delete CI[id+model];
+  save();renderReset(id);toast('Silakan atur waktu timer baru.','tin');
+}
+
+function buildTimerPane(a, model){
+  const hasTimer = a['resetAt'+model] && a['resetAt'+model] > Date.now();
+  const cdId = 'cd-'+a.id+model;
+  const d = a['rd'+model]||'', h=a['rh'+model]||'', m2=a['rm'+model]||'';
+  const btnColor = model==='G'?'srb-g':'srb-p';
+  const timerColor = model==='G'?'var(--blue)':'var(--green)';
+
+  if(hasTimer){
+    return '<div class="cd2"><span style="font-size:.9rem">⏳</span>'
+      +'<div class="cdt"><div class="cdl">Reset dalam</div>'
+      +'<div class="cdc" id="'+cdId+'" style="color:'+timerColor+'">...</div></div>'
+      +'<button class="rtb" onclick="editTimer(\''+a.id+'\',\''+model+'\')">Ubah</button>'
+      +'<button class="crb" onclick="clearTimer(\''+a.id+'\',\''+model+'\')">Hapus</button>'
+      +'</div>';
+  }
+  return '<div class="ri">'
+    +'<div class="ig"><label class="il">Hari</label>'
+    +'<input type="number" id="d-'+a.id+model+'" class="if" min="0" max="365" placeholder="0" value="'+d+'"/></div>'
+    +'<div class="ig"><label class="il">Jam</label>'
+    +'<input type="number" id="h-'+a.id+model+'" class="if" min="0" max="23" placeholder="0" value="'+h+'"/></div>'
+    +'<div class="ig"><label class="il">Menit</label>'
+    +'<input type="number" id="m-'+a.id+model+'" class="if" min="0" max="59" placeholder="0" value="'+m2+'"/></div>'
+    +'</div>'
+    +'<button class="'+btnColor+'" onclick="setTimer(\''+a.id+'\',\''+model+'\')">'
+    +(model==='G'?'⚡ Set Gemini Timer':'🤖 Set GPT/Claude Timer')+'</button>';
+}
+
+function buildReset(a){
+  const gPane = buildTimerPane(a,'G');
+  const pPane = buildTimerPane(a,'P');
+  return '<div class="rs">'
+    +'<div class="rs-box">'
+    +'<div class="rs-head"><div class="mdot gd"></div><span class="rs-title g">Gemini Reset Timer</span></div>'
+    +'<div id="pane-g-'+a.id+'">'+gPane+'</div>'
+    +'</div>'
+    +'<div class="rs-box">'
+    +'<div class="rs-head"><div class="mdot cd2dot"></div><span class="rs-title p">ChatGPT &amp; Claude Reset Timer</span></div>'
+    +'<div id="pane-p-'+a.id+'">'+pPane+'</div>'
+    +'</div>'
+    +'</div>';
+}
+
+// Card expand/collapse on click
+// Tracks order of opened cards (for max-2 accordion logic)
+let _openOrder=[];
+
+function handleCardClick(e, id){
+  // FIX: Only the .card-head area triggers expand/collapse.
+  // Clicks in .card-body (sliders, timers, inputs) are ignored.
+  if(!e.target.closest('.card-head')) return;
+  // Also ignore buttons/delete icon inside card-head
+  if(e.target.closest('button')) return;
+
+  if(expandedCards[id]){
+    // Card is already open → close it (toggle off)
+    expandedCards[id]=false;
+    _openOrder=_openOrder.filter(function(k){return k!==id;});
+    const c=document.getElementById('card-'+id);
+    if(c) c.classList.remove('expanded');
+  } else {
+    // Card is closed → open it.
+    // MAX 2 cards open at a time.
+    // If opening this card would make 3+, close all previously open cards first.
+    if(_openOrder.length>=2){
+      _openOrder.forEach(function(k){
+        expandedCards[k]=false;
+        const c=document.getElementById('card-'+k);
+        if(c) c.classList.remove('expanded');
+      });
+      _openOrder=[];
+    }
+    expandedCards[id]=true;
+    _openOrder.push(id);
+    const card=document.getElementById('card-'+id);
+    if(card) card.classList.add('expanded');
+  }
+}
+
+// Arrow button: adjust token value ±1 without re-rendering
+function stepVal(id, field, delta){
+  const a=S.accounts.find(x=>x.id===id);if(!a)return;
+  const newVal=Math.max(0,Math.min(100,(a[field]||0)+delta));
+  a[field]=newVal;
+  const prefix=field==='gemini'?'g':'p';
+  const fi=document.getElementById(prefix+'f-'+id);
+  const th=document.getElementById(prefix+'h-'+id);
+  const sv=document.getElementById(prefix+'v-'+id);
+  if(fi)fi.style.width=newVal+'%';
+  if(th)th.style.left=newVal+'%';
+  if(sv){sv.textContent=newVal+'%';sv.className='sv '+gtc(newVal);}
+  save();upSumNoRender();
+}
+
+function buildCard(a){
+  const st=getStatus(a);
+  const exp=expandedCards[a.id]?' expanded':'';
+  return '<div class="card'+exp+'" id="card-'+a.id+'" onclick="handleCardClick(event,\''+a.id+'\')">'    +'<div class="card-head">'    +'<div class="chl">'    +'<div class="av">'+gin(a.email)+'</div>'    +'<div class="ci"><div class="em" title="'+a.email+'">'+a.email+'</div>'    +'<span class="sbadge '+st.cls+'">'+st.dot+' '+st.lbl+'</span></div></div>'    +'<button class="ib" onclick="event.stopPropagation();delAcc(\''+a.id+'\')" title="Hapus">🗑️</button>'    +'</div>'    +'<div class="card-body">'    +'<div class="ms">'    +'<div class="msec"><div class="msh"><div class="mdot gd"></div><div class="mst">Gemini Models</div></div>'    +'<div class="sc"><div class="st"><span class="sl">Token tersisa</span>'    +'<span class="sv '+gtc(a.gemini)+'" id="gv-'+a.id+'">'+a.gemini+'%</span></div>'    +'<div class="sw">'    +'<button class="sarr" onclick="event.stopPropagation();stepVal(\''+a.id+'\',\'gemini\',-1)">&#8249;</button>'    +'<div class="cs" id="gt-'+a.id+'"><div class="cf gf" id="gf-'+a.id+'" style="width:'+a.gemini+'%"></div>'    +'<div class="ct" id="gh-'+a.id+'" style="left:'+a.gemini+'%"></div></div>'    +'<button class="sarr" onclick="event.stopPropagation();stepVal(\''+a.id+'\',\'gemini\',1)">&#8250;</button>'    +'</div></div></div>'    +'<div class="msec"><div class="msh"><div class="mdot cd2dot"></div><div class="mst">ChatGPT &amp; Claude</div></div>'    +'<div class="sc"><div class="st"><span class="sl">Token tersisa</span>'    +'<span class="sv '+gtc(a.gpt)+'" id="pv-'+a.id+'">'+a.gpt+'%</span></div>'    +'<div class="sw">'    +'<button class="sarr" onclick="event.stopPropagation();stepVal(\''+a.id+'\',\'gpt\',-1)">&#8249;</button>'    +'<div class="cs" id="pt-'+a.id+'"><div class="cf pf" id="pf-'+a.id+'" style="width:'+a.gpt+'%"></div>'    +'<div class="ct" id="ph-'+a.id+'" style="left:'+a.gpt+'%"></div></div>'    +'<button class="sarr" onclick="event.stopPropagation();stepVal(\''+a.id+'\',\'gpt\',1)">&#8250;</button>'    +'</div></div></div>'    +'</div>'    +'<div id="rs-'+a.id+'" onclick="event.stopPropagation()">'+buildReset(a)+'</div>'    +'</div>'    +'</div>';
+}
+
+// Track active slider elements for cleanup
+let activeSliders = [];
+
+function renderList(){
+  // Cleanup old slider listeners
+  activeSliders.forEach(tr=>cleanupSlider(tr));
+  activeSliders=[];
+
+  const lst=document.getElementById('list');
+  const emp=document.getElementById('empty');
+  const visible=S.accounts.filter(a=>{
+    if(activeFilter==='ok') return isAman(a);
+    if(activeFilter==='masih') return isMasih(a);
+    return true;
+  });
+  if(!S.accounts.length){lst.innerHTML='';emp.style.display='';return}
+  emp.style.display='none';
+  if(!visible.length){
+    const feIcon=activeFilter==='ok'?'✅':'🟡';
+    const feMsg=activeFilter==='ok'?'Tidak ada akun token aman.':'Tidak ada akun yang masih punya token!';
+    lst.innerHTML='<div class="filter-empty"><span>'+feIcon+'</span><p>'+feMsg+'</p></div>';
+    return;
+  }
+  lst.innerHTML=visible.map(buildCard).join('');
+  visible.forEach(a=>{
+    // Gemini slider
+    const gt=document.getElementById('gt-'+a.id),gf=document.getElementById('gf-'+a.id),
+          gh=document.getElementById('gh-'+a.id),gv=document.getElementById('gv-'+a.id);
+    if(gt){
+      initSlider(gt,gf,gh,a.gemini,p=>{
+        a.gemini=p;
+        if(gv){gv.textContent=p+'%';gv.className='sv '+gtc(p);}
+        save(); upSumNoRender();
+      });
+      activeSliders.push(gt);
+    }
+    // GPT slider
+    const pt=document.getElementById('pt-'+a.id),pf=document.getElementById('pf-'+a.id),
+          ph=document.getElementById('ph-'+a.id),pv=document.getElementById('pv-'+a.id);
+    if(pt){
+      initSlider(pt,pf,ph,a.gpt,p=>{
+        a.gpt=p;
+        if(pv){pv.textContent=p+'%';pv.className='sv '+gtc(p);}
+        save(); upSumNoRender();
+      });
+      activeSliders.push(pt);
+    }
+    // Start countdowns
+    if(a.resetAtG&&a.resetAtG>Date.now())startCD(a.id,'G');
+    if(a.resetAtP&&a.resetAtP>Date.now())startCD(a.id,'P');
+    // Mark card urgent on initial render if any timer < 1h
+    const _now=Date.now();
+    const _gU=a.resetAtG&&a.resetAtG>_now&&(a.resetAtG-_now)<3600000;
+    const _pU=a.resetAtP&&a.resetAtP>_now&&(a.resetAtP-_now)<3600000;
+    const _card=document.getElementById('card-'+a.id);
+    if(_card){
+      const _wasU=_card.classList.contains('urgent');
+      const _nowU=!!(_gU||_pU);
+      if(_nowU!==_wasU)_card.classList.toggle('urgent',_nowU);
+      // startBreathe called below after forEach completes (DOM fully ready)
+    }
+  });
+  // Always ensure breathe engine is running after render — it self-manages
+  startBreathe();
+}
+
+// Update summary badges without re-rendering list (used by slider)
+function upSumNoRender(){
+  const tot=S.accounts.length;let aman=0,masih=0;
+  S.accounts.forEach(a=>{
+    if(isAman(a)) aman++;
+    if(isMasih(a)) masih++;
+  });
+  document.getElementById('sumBar').style.display=tot?'':'none';
+  document.getElementById('tTotal').textContent=tot+' Akun';
+  document.getElementById('tHealthy').textContent=aman+' Aman';
+  document.getElementById('tMasih').textContent=masih+' Masih Ada';
+}
+
+function upSum(){
+  upSumNoRender();
+  renderList();
+}
+
+function render(){upSum();}
+
+// ── JS Breathe Engine v2 — fully self-managing, reads S.accounts directly ──
+// No dependency on DOM classes. Checks data every 40ms → applies bg to urgent
+// cards found in DOM → self-stops when no urgents remain.
+// Immune to renderList() re-renders and filter changes.
+let _bPhase=0,_bTimer=null;
+
+function _runBreathe(){
+  const now=Date.now();
+  // Build set of account IDs that currently need urgency glow
+  const urgentIds=new Set();
+  S.accounts.forEach(function(a){
+    const gU=a.resetAtG&&a.resetAtG>now&&(a.resetAtG-now)<3600000;
+    const pU=a.resetAtP&&a.resetAtP>now&&(a.resetAtP-now)<3600000;
+    if(gU||pU) urgentIds.add(a.id);
+  });
+
+  if(urgentIds.size===0){
+    // No urgent accounts — self-stop and clear all card styles
+    clearInterval(_bTimer);_bTimer=null;
+    document.querySelectorAll('.card').forEach(function(c){
+      c.style.background='';c.style.borderColor='';
+    });
+    return;
+  }
+
+  // Advance phase and compute colors
+  _bPhase+=0.055;if(_bPhase>=Math.PI*2)_bPhase-=Math.PI*2;
+  const v=(1-Math.cos(_bPhase))/2;                  // 0→1→0
+  const hue=Math.round(18+Math.sin(_bPhase*0.5)*14); // 4°–32°
+  const alpha=(0.12+v*0.24).toFixed(3);              // 0.12–0.36 (always visible)
+  const brdAlpha=(0.3+v*0.65).toFixed(3);
+  const bg='hsla('+hue+',92%,52%,'+alpha+')';
+  const brd='hsla('+hue+',92%,68%,'+brdAlpha+')';
+
+  // Apply to all visible cards — glow urgent, clear non-urgent
+  document.querySelectorAll('.card').forEach(function(card){
+    const id=card.id.replace('card-','');
+    if(urgentIds.has(id)){
+      card.style.background=bg;
+      card.style.borderColor=brd;
+    } else {
+      card.style.background='';
+      card.style.borderColor='';
+    }
+  });
+}
+
+// startBreathe: ensures engine running AND paints immediately (no 40ms delay)
+function startBreathe(){
+  // Always do an immediate paint so urgency shows without waiting for next tick
+  _runBreathe();
+  if(_bTimer) return; // already running, immediate paint was enough refresh
+  // Start at mid-phase so glow is visible right away (not at dim 0-phase)
+  _bPhase=Math.PI*0.6;
+  _bTimer=setInterval(_runBreathe,40);
+}
+
+// tryStopBreathe: no-op now (engine self-manages), kept for compat
+function tryStopBreathe(){ /* engine self-stops in _runBreathe when no urgents */ }
+
+// ── Process timers that expired while app was closed/minimized ──────────────
+// Called once on startup and every 60s so tokens reset correctly even when
+// the panel is hidden (user didn't open it when timer expired).
+function processExpiredTimers() {
+  const now = Date.now();
+  let changed = false;
+  S.accounts.forEach(function(a) {
+    if (a.resetAtG && a.resetAtG <= now) {
+      // Gemini timer expired
+      a.gemini = 100; a.resetAtG = null;
+      // Clear any running interval
+      clearInterval(CI[a.id+'G']); delete CI[a.id+'G'];
+      changed = true;
+    }
+    if (a.resetAtP && a.resetAtP <= now) {
+      // GPT/Claude timer expired
+      a.gpt = 100; a.resetAtP = null;
+      clearInterval(CI[a.id+'P']); delete CI[a.id+'P'];
+      changed = true;
+    }
+  });
+  if (changed) { save_data(S); }
+  return changed;
+}
+
+// Run on startup — resets any tokens whose timers fired while app was closed
+processExpiredTimers();
+render();
+// Start breathe engine — it self-manages (starts, animates, stops as needed)
+startBreathe();
+
+// Re-check every 60 seconds in case timers expire while panel is hidden
+setInterval(function() {
+  if (processExpiredTimers()) {
+    // Some timer just expired — re-render to show updated sliders & clear timers
+    upSum();
+    toast('Token direset otomatis! 🎉', 'ts');
+  }
+}, 60000);
+</script>
+</body>
+</html>

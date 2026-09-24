@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Electron built binaries (200MB+, tidak perlu di-repo)
+electron-dist/
+
+# Data pribadi — JANGAN di-push ke public repo!
+# File ini berisi daftar email akun, simpan lokal saja
+data.json
+data.json.bak
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+npm-debug.log*

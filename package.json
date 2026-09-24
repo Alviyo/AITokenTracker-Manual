@@ -1,0 +1,13 @@
+﻿{
+  "name": "ai-token-tracker",
+  "version": "1.0.0",
+  "description": "AI Token Tracker Desktop App",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "start:direct": "node_modules\\electron\\dist\\electron.exe ."
+  },
+  "devDependencies": {
+    "electron": "^28.3.3"
+  }
+}
