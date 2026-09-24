@@ -1,11 +1,10 @@
 # Dependencies
 node_modules/
 
-# Electron built binaries (200MB+, tidak perlu di-repo)
+# Electron built binaries
 electron-dist/
 
-# Data pribadi — JANGAN di-push ke public repo!
-# File ini berisi daftar email akun, simpan lokal saja
+# Data pribadi
 data.json
 data.json.bak
 
