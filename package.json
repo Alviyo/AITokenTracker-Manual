@@ -1,13 +1,36 @@
-﻿{
+{
   "name": "ai-token-tracker",
   "version": "1.0.0",
   "description": "AI Token Tracker Desktop App",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "start:direct": "node_modules\\electron\\dist\\electron.exe ."
+    "start:direct": "node_modules\\electron\\dist\\electron.exe .",
+    "dist": "electron-builder"
+  },
+  "build": {
+    "appId": "com.alviyo.aitokentracker",
+    "productName": "AI Token Tracker",
+    "files": [
+      "main.js",
+      "renderer/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   },
   "devDependencies": {
-    "electron": "^28.3.3"
+    "electron": "^28.3.3",
+    "electron-builder": "^26.15.3"
   }
 }

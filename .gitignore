@@ -3,6 +3,7 @@ node_modules/
 
 # Electron built binaries
 electron-dist/
+dist/
 
 # Data pribadi
 data.json

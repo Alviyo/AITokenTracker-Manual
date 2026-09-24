@@ -277,7 +277,27 @@ body::before{content:'';position:fixed;inset:0;
 const { ipcRenderer } = require('electron');
 const fs = require('fs');
 const path = require('path');
-const DATA_FILE = path.join(__dirname, '..', 'data.json');
+
+// Di mode dev pakai folder project, saat dibuild jadi .exe (packaged) pakai folder userData sistem
+let DATA_FILE;
+try {
+  const { app } = require('@electron/remote') || {};
+  // Cek apakah ada ipcRenderer atau require electron
+  const electronApp = require('electron').remote?.app || (process.type === 'renderer' ? null : null);
+  // Fallback aman: jika packaged (berada di resources/app.asar), simpan di AppData
+  if (process.resourcesPath && !process.defaultApp) {
+    const appData = process.env.APPDATA || (process.platform === 'darwin' ? process.env.HOME + '/Library/Application Support' : process.env.HOME + '/.config');
+    const userDir = path.join(appData, 'ai-token-tracker');
+    if (!fs.existsSync(userDir)) {
+      try { fs.mkdirSync(userDir, { recursive: true }); } catch(e) {}
+    }
+    DATA_FILE = path.join(userDir, 'data.json');
+  } else {
+    DATA_FILE = path.join(__dirname, '..', 'data.json');
+  }
+} catch (e) {
+  DATA_FILE = path.join(__dirname, '..', 'data.json');
+}
 
 function load_data() {
   try {
